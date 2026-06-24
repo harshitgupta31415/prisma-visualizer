@@ -12,16 +12,21 @@ interface ModelNodeProps {
     hoveredField?: string | null;
     highlighted?: boolean;
     active?: boolean;
+    onSelectElement?: (nodeName: string, fieldName?: string) => void;
   };
 }
 
 export const ModelNode = memo(({ data }: ModelNodeProps) => {
-  const { name, fields, documentation, highlighted, active } = data;
+  const { name, fields, documentation, highlighted, active, onSelectElement } = data;
 
   return (
     <div className={`model-node ${active ? 'active' : ''} ${highlighted ? 'highlighted' : ''}`}>
       {/* Node Header */}
-      <div className="model-node-header">
+      <div 
+        className="model-node-header"
+        onClick={() => onSelectElement?.(name)}
+        style={{ cursor: 'pointer' }}
+      >
         <div className="model-node-title-container">
           <span className="model-node-icon">📊</span>
           <h3 className="model-node-title">{name}</h3>
