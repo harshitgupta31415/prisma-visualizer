@@ -52,6 +52,11 @@ export const ModelNode = memo(({ data }: ModelNodeProps) => {
               className={`model-field-row ${
                 isPrimaryKey ? 'primary-key' : ''
               } ${isRelationField ? 'relation-field-row' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectElement?.(name, field.name);
+              }}
+              style={{ cursor: 'pointer' }}
             >
               {/* Left Handles */}
               <Handle

@@ -8,11 +8,12 @@ interface EnumNodeProps {
     documentation?: string;
     highlighted?: boolean;
     active?: boolean;
+    onSelectElement?: (nodeName: string, fieldName?: string) => void;
   };
 }
 
 export const EnumNode = memo(({ data }: EnumNodeProps) => {
-  const { name, values, documentation, highlighted, active } = data;
+  const { name, values, documentation, highlighted, active, onSelectElement } = data;
 
   return (
     <div className={`enum-node ${active ? 'active' : ''} ${highlighted ? 'highlighted' : ''}`}>
@@ -30,7 +31,11 @@ export const EnumNode = memo(({ data }: EnumNodeProps) => {
         style={{ background: '#10b981', top: '26px' }}
       />
 
-      <div className="enum-node-header">
+      <div 
+        className="enum-node-header"
+        onClick={() => onSelectElement?.(name)}
+        style={{ cursor: 'pointer' }}
+      >
         <div className="enum-node-title-container">
           <span className="enum-node-icon">📋</span>
           <h3 className="enum-node-title">{name}</h3>
@@ -45,7 +50,15 @@ export const EnumNode = memo(({ data }: EnumNodeProps) => {
 
       <div className="enum-node-values">
         {values.map((val) => (
-          <div key={val} className="enum-value-row">
+          <div 
+            key={val} 
+            className="enum-value-row"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectElement?.(name, val);
+            }}
+            style={{ cursor: 'pointer' }}
+          >
             <span className="enum-value-bullet">•</span>
             <span className="enum-value-text">{val}</span>
           </div>

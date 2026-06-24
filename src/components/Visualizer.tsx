@@ -45,9 +45,10 @@ interface VisualizerProps {
   schema: PrismaSchema;
   focusedNodeId: string | null;
   onSelectNode: (nodeId: string | null) => void;
+  onSelectElement?: (nodeName: string, fieldName?: string) => void;
 }
 
-const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerProps) => {
+const VisualizerContent = ({ schema, focusedNodeId, onSelectNode, onSelectElement }: VisualizerProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { fitView, setViewport, getViewport } = useReactFlow();
@@ -71,6 +72,7 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
           name: model.name,
           fields: model.fields,
           documentation: model.documentation,
+          onSelectElement,
         },
         position: { x: 0, y: 0 },
       });
@@ -85,6 +87,7 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
           name: enumData.name,
           values: enumData.values,
           documentation: enumData.documentation,
+          onSelectElement,
         },
         position: { x: 0, y: 0 },
       });
@@ -198,7 +201,7 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
     setTimeout(() => {
       fitView({ padding: 0.15, duration: 800 });
     }, 50);
-  }, [schema, layoutDir, setNodes, setEdges, fitView]);
+  }, [schema, layoutDir, setNodes, setEdges, fitView, onSelectElement]);
 
   // Build elements when schema or layout changes
   useEffect(() => {
@@ -519,10 +522,15 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
   );
 };
 
-export const Visualizer = ({ schema, focusedNodeId, onSelectNode }: VisualizerProps) => {
+export const Visualizer = ({ schema, focusedNodeId, onSelectNode, onSelectElement }: VisualizerProps) => {
   return (
     <ReactFlowProvider>
-      <VisualizerContent schema={schema} focusedNodeId={focusedNodeId} onSelectNode={onSelectNode} />
+      <VisualizerContent 
+        schema={schema} 
+        focusedNodeId={focusedNodeId} 
+        onSelectNode={onSelectNode} 
+        onSelectElement={onSelectElement} 
+      />
     </ReactFlowProvider>
   );
 };

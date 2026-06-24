@@ -36,6 +36,7 @@ export default function PrismaVisualizerApp() {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const isResizingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<any>(null);
 
   // Copy code helper
   const handleCopyCode = () => {
@@ -70,6 +71,7 @@ export default function PrismaVisualizerApp() {
 
   // Setup Prisma language in Monaco
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
+    editorRef.current = editor;
     // Register custom language for Prisma
     monaco.languages.register({ id: 'prisma' });
 
@@ -208,6 +210,80 @@ export default function PrismaVisualizerApp() {
     });
     return count;
   };
+
+  // Find correct line number in Prisma schema code
+  const findLineInCode = (schemaCode: string, nodeName: string, fieldName?: string): number => {
+    const lines = schemaCode.split('\n');
+    const nodeRegex = new RegExp(`^\\s*(model|enum)\\s+${nodeName}\\b`);
+    
+    let nodeStartIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (nodeRegex.test(lines[i])) {
+        nodeStartIndex = i;
+        break;
+      }
+    }
+
+    if (nodeStartIndex === -1) return 1;
+
+    if (!fieldName) {
+      return nodeStartIndex + 1;
+    }
+
+    // Look for the field/value line within the block
+    for (let i = nodeStartIndex + 1; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      
+      // Ignore comments
+      if (trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+        continue;
+      }
+      
+      // Check if block ended
+      if (trimmed.includes('}')) {
+        break;
+      }
+      
+      const tokens = trimmed.split(/\s+/);
+      if (tokens.length > 0 && tokens[0] === fieldName) {
+        return i + 1;
+      }
+    }
+
+    return nodeStartIndex + 1;
+  };
+
+  // Handle visualizer node/field clicks to select/highlight code line
+  const handleSelectElement = useCallback((nodeName: string, fieldName?: string) => {
+    setFocusedNodeId(nodeName);
+    
+    const triggerSelection = () => {
+      if (editorRef.current) {
+        const lineNumber = findLineInCode(code, nodeName, fieldName);
+        const lines = code.split('\n');
+        const lineContent = lines[lineNumber - 1] || '';
+        
+        editorRef.current.revealLineInCenter(lineNumber);
+        editorRef.current.setPosition({ lineNumber, column: 1 });
+        editorRef.current.setSelection({
+          startLineNumber: lineNumber,
+          startColumn: 1,
+          endLineNumber: lineNumber,
+          endColumn: lineContent.length + 1
+        });
+        editorRef.current.focus();
+      }
+    };
+
+    if (isSidebarCollapsed) {
+      setIsSidebarCollapsed(false);
+      // Wait for layout/DOM transition to finish so Monaco Editor has correct viewport dimensions
+      setTimeout(triggerSelection, 100);
+    } else {
+      triggerSelection();
+    }
+  }, [code, isSidebarCollapsed]);
 
   return (
     <div ref={containerRef} className="dashboard-container">
@@ -398,6 +474,7 @@ export default function PrismaVisualizerApp() {
               schema={parsedSchema}
               focusedNodeId={focusedNodeId}
               onSelectNode={setFocusedNodeId}
+              onSelectElement={handleSelectElement}
             />
           </div>
         </main>
