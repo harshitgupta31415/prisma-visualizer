@@ -30,10 +30,15 @@ import { PrismaSchema } from '../utils/prismaParser';
 import { getLayoutedElements } from '../utils/layout';
 import { ModelNode } from './ModelNode';
 import { EnumNode } from './EnumNode';
+import { StraightFlowEdge } from './StraightFlowEdge';
 
 const nodeTypes = {
   model: ModelNode,
   enum: EnumNode,
+};
+
+const edgeTypes = {
+  straightFlow: StraightFlowEdge,
 };
 
 interface VisualizerProps {
@@ -101,15 +106,16 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
                 newEdges.push({
                   id: edgeId,
                   source: model.name,
-                  sourceHandle: `${fk}-source`,
+                  sourceHandle: `${fk}-source-right`,
                   target: field.type,
-                  targetHandle: `${pk}-target`,
+                  targetHandle: `${pk}-target-left`,
                   animated: true,
-                  type: 'default',
+                  type: 'straightFlow',
                   data: {
                     type: 'relation',
                     fk,
                     pk,
+                    direction: layoutDir,
                   },
                   markerEnd: {
                     type: MarkerType.ArrowClosed,
@@ -134,12 +140,13 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
                   newEdges.push({
                     id: relationKey,
                     source: model.name,
-                    sourceHandle: `${field.name}-source`,
+                    sourceHandle: `${field.name}-source-right`,
                     target: field.type,
-                    targetHandle: `${targetField.name}-target`,
+                    targetHandle: `${targetField.name}-target-left`,
                     animated: true,
-                    type: 'default',
-                    data: { type: 'm2m' },
+                    type: 'straightFlow',
+                    className: 'edge-m2m',
+                    data: { type: 'm2m', direction: layoutDir },
                     markerEnd: {
                       type: MarkerType.ArrowClosed,
                       width: 12,
@@ -162,12 +169,12 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
               newEdges.push({
                 id: edgeId,
                 source: model.name,
-                sourceHandle: `${field.name}-source`,
+                sourceHandle: `${field.name}-source-right`,
                 target: field.type,
-                targetHandle: `${field.type}-enum-target`,
+                targetHandle: `${field.type}-enum-target-left`,
                 animated: false,
-                type: 'default',
-                data: { type: 'enum' },
+                type: 'straightFlow',
+                data: { type: 'enum', direction: layoutDir },
                 markerEnd: {
                   type: MarkerType.ArrowClosed,
                   width: 12,
@@ -250,6 +257,8 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
   }, [onSelectNode]);
 
   // Compute node and edge styling overrides based on hover / selection states
+  const targetHandlesWithMarker = new Set<string>();
+
   const updatedEdges = edges.map((edge) => {
     const activeNodeId = hoveredNodeId || focusedNodeId;
     
@@ -262,42 +271,62 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
       isHighlighted = isConnected;
       isDimmed = !isConnected;
     } else if (selectedEdgeId) {
+      const selectedEdge = edges.find(e => e.id === selectedEdgeId);
       const isSelected = edge.id === selectedEdgeId;
-      isHighlighted = isSelected;
-      isDimmed = !isSelected;
+      
+      // If the edge shares the same target and targetHandle as the selected edge,
+      // it merges into the same line, so we highlight it too!
+      const isMergedWithSelected = !!(selectedEdge && 
+        edge.target === selectedEdge.target && 
+        edge.targetHandle === selectedEdge.targetHandle);
+
+      isHighlighted = isSelected || isMergedWithSelected;
+      isDimmed = !isHighlighted;
     }
 
     let strokeColor = '#475569';
     let strokeWidth = 2.8;
     let animated = false;
-    let className = '';
+    let className = edge.className || '';
 
     if (isHighlighted) {
       animated = true;
-      strokeWidth = 6.0; // Thicker focused edge
-      className = 'react-flow__edge-hovered'; // Triggers CSS neon flowing animations
+      strokeWidth = 8.0; // Thicker focused edge for high visibility on zoom-out
+      className = `${edge.className || ''} react-flow__edge-hovered`.trim();
       
       if (edge.data?.type === 'relation') {
-        strokeColor = '#f472b6'; // Ultra Bright Pink
+        strokeColor = '#ff2a85'; // Ultra Bright Neon Pink
       } else if (edge.data?.type === 'm2m') {
-        strokeColor = '#22d3ee'; // Ultra Bright Cyan
+        strokeColor = '#00f0ff'; // Ultra Bright Neon Cyan
       } else {
-        strokeColor = '#34d399'; // Ultra Bright Emerald
+        strokeColor = '#00ff87'; // Ultra Bright Neon Emerald Green
       }
     } else if (isDimmed) {
-      strokeColor = 'rgba(100, 116, 139, 0.16)'; // Dimmed line but still visible
-      strokeWidth = 1.2;
+      strokeColor = 'rgba(100, 116, 139, 0.05)'; // Deeply dimmed line to make active paths stand out
+      strokeWidth = 1.0;
     } else {
       // Default state: animate relations, standard width
       animated = edge.data?.type === 'relation' || edge.data?.type === 'm2m';
-      strokeWidth = 3.0; // Default thicker lines
+      strokeWidth = 4.5; // Thicker default lines for visibility on zoom-out
       if (edge.data?.type === 'relation') {
-        strokeColor = 'rgba(244, 114, 182, 0.85)';
+        strokeColor = 'rgba(255, 42, 133, 0.85)';
       } else if (edge.data?.type === 'm2m') {
-        strokeColor = 'rgba(34, 211, 238, 0.85)';
+        strokeColor = 'rgba(0, 240, 255, 0.85)';
       } else {
-        strokeColor = 'rgba(52, 211, 153, 0.85)';
+        strokeColor = 'rgba(0, 255, 135, 0.85)';
       }
+    }
+
+    // Only render one arrowhead per target handle to prevent overlap/stacking artifacts
+    const markerKey = `${edge.target}__${edge.targetHandle}`;
+    let markerEnd = undefined;
+
+    if (!targetHandlesWithMarker.has(markerKey)) {
+      targetHandlesWithMarker.add(markerKey);
+      markerEnd = typeof edge.markerEnd === 'object' ? {
+        ...edge.markerEnd,
+        color: strokeColor,
+      } : edge.markerEnd;
     }
 
     return {
@@ -310,10 +339,7 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
         strokeWidth,
         transition: 'stroke 0.25s, stroke-width 0.25s, opacity 0.25s',
       },
-      markerEnd: typeof edge.markerEnd === 'object' ? {
-        ...edge.markerEnd,
-        color: strokeColor,
-      } : edge.markerEnd,
+      markerEnd,
     };
   });
 
@@ -333,10 +359,22 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
       isHighlighted = isHovered || isConnected;
       isDimmed = !isHighlighted;
     } else if (selectedEdgeId) {
-      const edge = edges.find((e) => e.id === selectedEdgeId);
-      const isEndpoint = edge && (node.id === edge.source || node.id === edge.target);
-      isHighlighted = !!isEndpoint;
-      isDimmed = !isEndpoint;
+      const selectedEdge = edges.find((e) => e.id === selectedEdgeId);
+      
+      // Find all edges that merge with the selected edge (same target and targetHandle)
+      const mergedEdges = edges.filter(
+        (e) =>
+          selectedEdge &&
+          e.target === selectedEdge.target &&
+          e.targetHandle === selectedEdge.targetHandle
+      );
+
+      // Node is highlighted if it is the target, or if it is the source of any merged edge
+      const isTarget = selectedEdge && node.id === selectedEdge.target;
+      const isSourceOfAnyMerged = mergedEdges.some((e) => node.id === e.source);
+
+      isHighlighted = isTarget || isSourceOfAnyMerged;
+      isDimmed = !isHighlighted;
     }
 
     return {
@@ -348,7 +386,7 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
       },
       style: {
         ...node.style,
-        opacity: isHighlighted ? 1 : isDimmed ? 0.22 : 1, // Deeply dim unconnected cards
+        opacity: isHighlighted ? 1 : isDimmed ? 0.12 : 1, // Deeply dim unconnected cards for high contrast
         transition: 'opacity 0.25s, transform 0.25s',
       },
     };
@@ -362,9 +400,10 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
     const flowViewport = containerRef.current.querySelector('.react-flow__viewport') as HTMLElement;
     if (!flowViewport) return;
 
-    // Show a loading overlay or just complete it
+    // Exclude font CSS embedding to resolve browser memory and crashing issues
     toPng(flowViewport, {
-      backgroundColor: '#0c0c0e',
+      backgroundColor: '#09090b',
+      fontEmbedCSS: '', 
       style: {
         transform: 'scale(1)',
       },
@@ -388,6 +427,7 @@ const VisualizerContent = ({ schema, focusedNodeId, onSelectNode }: VisualizerPr
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         onNodeClick={(_, node) => {

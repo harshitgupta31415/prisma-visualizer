@@ -645,32 +645,48 @@ body.resizing .drag-divider {
 
 /* React Flow Nodes Layouts */
 
-.model-node, .enum-node {
-  background-color: #21212d; /* Lighter box background */
-  border: 1.5px solid rgba(255, 255, 255, 0.25); /* Thicker border */
+.model-node {
+  background-color: #21212d;
+  border: 3.5px solid rgba(244, 114, 182, 0.45); /* semi-transparent neon pink border */
   border-radius: 12px;
-  width: 290px; /* Wider card */
-  box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.6);
+  width: 290px;
+  box-shadow: 0 0 20px rgba(244, 114, 182, 0.12), 0 12px 30px -8px rgba(0, 0, 0, 0.7);
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.25s, opacity 0.25s;
 }
 
-.model-node.highlighted,
+.enum-node {
+  background-color: #21212d;
+  border: 3.5px solid rgba(52, 211, 153, 0.45); /* semi-transparent neon green border */
+  border-radius: 12px;
+  width: 290px;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.12), 0 12px 30px -8px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.25s, opacity 0.25s;
+}
+
+.model-node.highlighted {
+  border-color: rgba(244, 114, 182, 0.95) !important;
+  box-shadow: 0 0 30px rgba(244, 114, 182, 0.4), 0 20px 40px -10px rgba(0, 0, 0, 0.9) !important;
+  transform: translate3d(0, -6px, 0);
+}
+
 .enum-node.highlighted {
-  border-color: rgba(255, 255, 255, 0.65); /* Brighter border when selected */
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.4);
+  border-color: rgba(52, 211, 153, 0.95) !important;
+  box-shadow: 0 0 30px rgba(52, 211, 153, 0.4), 0 20px 40px -10px rgba(0, 0, 0, 0.9) !important;
+  transform: translate3d(0, -6px, 0);
 }
 
 .model-node.active {
-  border-color: var(--color-purple);
-  box-shadow: var(--glow-purple), 0 12px 40px rgba(0,0,0,0.6);
-  transform: scale(1.02);
+  border-color: #ffffff !important;
+  box-shadow: var(--glow-purple), 0 12px 40px rgba(0,0,0,0.8);
+  transform: translate3d(0, -8px, 0) scale(1.03) !important;
 }
 
 .enum-node.active {
-  border-color: var(--color-emerald);
-  box-shadow: var(--glow-emerald), 0 12px 40px rgba(0,0,0,0.6);
-  transform: scale(1.02);
+  border-color: #ffffff !important;
+  box-shadow: var(--glow-emerald), 0 12px 40px rgba(0,0,0,0.8);
+  transform: translate3d(0, -8px, 0) scale(1.03) !important;
 }
 
 /* Model Node Header */
@@ -837,18 +853,27 @@ body.resizing .drag-divider {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  overflow: hidden;
+  gap: 12px;
 }
 
 .model-field-name {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-main);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .model-field-type {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .relation-field-row .model-field-name {
@@ -953,68 +978,97 @@ body.resizing .drag-divider {
   transition: stroke 0.25s, stroke-width 0.25s, filter 0.25s;
 }
 
-/* Animate all active relation edges to flow */
+/* Animate all active relation edges to flow (fallback for other edge types) */
 .react-flow__edge.animated path.react-flow__edge-path {
-  stroke-dasharray: 6 12;
+  stroke-dasharray: 24 24;
   animation: flow-forward-current 1.2s linear infinite !important;
 }
 
 /* Speed up and add glowing drop-shadow when relationships are hovered */
 .react-flow__edge-hovered.react-flow__edge path.react-flow__edge-path {
-  stroke-dasharray: 4 8;
+  stroke-dasharray: 16 16;
   animation: flow-forward-current-fast 0.6s linear infinite !important;
-  filter: drop-shadow(0 0 4px currentColor);
 }
 
 @keyframes flow-forward-current {
-  from { stroke-dashoffset: 36; }
+  from { stroke-dashoffset: 48; }
   to { stroke-dashoffset: 0; }
 }
 
 @keyframes flow-forward-current-fast {
-  from { stroke-dashoffset: 24; }
+  from { stroke-dashoffset: 32; }
   to { stroke-dashoffset: 0; }
 }
 
-/* Card Hover micro-lifts */
-.model-node, .enum-node {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  will-change: transform, box-shadow;
+/* --- Straight Flow Edges & Gliding Arrows --- */
+
+.react-flow__edge-straightFlow path.react-flow__edge-path {
+  stroke-dasharray: none;
+  animation: none;
 }
 
-.model-node:hover, .enum-node:hover {
-  transform: translate3d(0, -6px, 0);
-  box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.7), 0 0 10px rgba(255, 255, 255, 0.05);
+/* Restore dashed style for many-to-many relationships (larger dashes for high performance) */
+.react-flow__edge-straightFlow.edge-m2m path.react-flow__edge-path {
+  stroke-dasharray: 16 16 !important;
+}
+
+@keyframes flow-glide {
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+/* Card Hover micro-lifts with sharpness fixes (no will-change to prevent blurring) */
+.model-node, .enum-node {
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  text-rendering: geometricPrecision;
+  transform-style: preserve-3d;
+}
+
+.model-node:hover {
+  transform: translate3d(0, -10px, 0); /* Lift higher on hover */
+  border-color: rgba(244, 114, 182, 1.0) !important;
+  box-shadow: 0 0 35px rgba(244, 114, 182, 0.6), 0 24px 50px -12px rgba(0, 0, 0, 0.85) !important;
+}
+
+.enum-node:hover {
+  transform: translate3d(0, -10px, 0); /* Lift higher on hover */
+  border-color: rgba(52, 211, 153, 1.0) !important;
+  box-shadow: 0 0 35px rgba(52, 211, 153, 0.6), 0 24px 50px -12px rgba(0, 0, 0, 0.85) !important;
 }
 
 /* Pulsating outline on active/focused card */
 .model-node.active {
-  animation: node-focus-glow-purple 2.5s infinite ease-in-out;
+  animation: node-focus-glow-purple 2s infinite ease-in-out !important;
 }
 
 .enum-node.active {
-  animation: node-focus-glow-emerald 2.5s infinite ease-in-out;
+  animation: node-focus-glow-emerald 2s infinite ease-in-out !important;
 }
 
 @keyframes node-focus-glow-purple {
   0%, 100% {
-    border-color: var(--color-purple);
-    box-shadow: var(--glow-purple), 0 10px 30px rgba(0,0,0,0.5);
+    border-color: #ffffff;
+    box-shadow: var(--glow-purple), 0 10px 30px rgba(0,0,0,0.6);
   }
   50% {
-    border-color: #d8b4fe;
-    box-shadow: 0 0 24px rgba(168, 85, 247, 0.5), 0 10px 30px rgba(0,0,0,0.5);
+    border-color: var(--color-purple);
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.8), 0 10px 30px rgba(0,0,0,0.6);
   }
 }
 
 @keyframes node-focus-glow-emerald {
   0%, 100% {
-    border-color: var(--color-emerald);
-    box-shadow: var(--glow-emerald), 0 10px 30px rgba(0,0,0,0.5);
+    border-color: #ffffff;
+    box-shadow: var(--glow-emerald), 0 10px 30px rgba(0,0,0,0.6);
   }
   50% {
-    border-color: #6ee7b7;
-    box-shadow: 0 0 24px rgba(16, 185, 129, 0.5), 0 10px 30px rgba(0,0,0,0.5);
+    border-color: var(--color-emerald);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.8), 0 10px 30px rgba(0,0,0,0.6);
   }
 }
 
